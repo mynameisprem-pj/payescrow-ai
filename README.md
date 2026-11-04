@@ -7,9 +7,6 @@
 [![Channel3 Product Graph](https://img.shields.io/badge/Sourcing-Channel3%20API-indigo)](https://trychannel3.com)
 [![APIMatic Validated](https://img.shields.io/badge/Schema-APIMatic%20Context%20Guard-amber)](https://www.apimatic.io/)
 
-> **Live Demo Deployment:** `[INSERT_YOUR_VERCEL_URL_HERE]`  
-> **3-Minute Demo Video:** `[INSERT_YOUR_YOUTUBE_URL_HERE]`
-
 ---
 
 ## 🎯 1. Problem Statement & Industry Friction
