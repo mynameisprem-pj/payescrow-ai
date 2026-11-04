@@ -1,6 +1,7 @@
 // src/app/api/procure/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { searchChannel3Products } from "@/lib/channel3";
+import { analyzeRequisitionWithAI } from "@/lib/ai-agent";
 import {
   createPayPalEscrowOrder,
   registerPayPalShipmentTracking,
@@ -41,70 +42,12 @@ export async function POST(req: NextRequest) {
 
     // ACTION 1: Autonomous Sourcing via Channel3 Product Graph
     if (action === "SOURCE_PRODUCTS") {
-      const lower = prompt.toLowerCase();
-      const qtyMatch = prompt.match(/\b(\d+)\b/);
-      const defaultQty = qtyMatch
-        ? Math.min(Math.max(parseInt(qtyMatch[1], 10), 1), 25)
-        : 5;
-
-      let categoryQueries: Array<{
-        query: string;
-        label: string;
-        maxUnit: number;
-      }> = [
-        {
-          query: "27 inch 4K USB-C Monitor",
-          label: "4K Displays & Hubs",
-          maxUnit: 450,
-        },
-        {
-          query: "Ergonomic Office Mesh Chair",
-          label: "Ergonomic Seating",
-          maxUnit: 350,
-        },
-      ];
-
-      if (
-        lower.includes("podcast") ||
-        lower.includes("conference") ||
-        lower.includes("audio") ||
-        lower.includes("studio")
-      ) {
-        categoryQueries = [
-          {
-            query: "XLR Podcast Dynamic Microphone",
-            label: "Studio Audio Gear",
-            maxUnit: 300,
-          },
-          {
-            query: "4K PTZ Conference Room Camera",
-            label: "4K Video Capture",
-            maxUnit: 450,
-          },
-        ];
-      } else if (
-        lower.includes("server") ||
-        lower.includes("network") ||
-        lower.includes("compute") ||
-        lower.includes("node")
-      ) {
-        categoryQueries = [
-          {
-            query: "Mini PC Workstation Desktop",
-            label: "Compute Nodes",
-            maxUnit: 650,
-          },
-          {
-            query: "Managed Gigabit PoE Network Switch",
-            label: "Network Infrastructure",
-            maxUnit: 250,
-          },
-        ];
-      }
+      const aiPlan = await analyzeRequisitionWithAI(prompt, budget);
+      const defaultQty = aiPlan.fleetQuantity;
 
       const results = await Promise.all(
-        categoryQueries.map((q) =>
-          searchChannel3Products(q.query, q.label, q.maxUnit)
+        aiPlan.categories.map((q) =>
+          searchChannel3Products(q.searchQuery, q.categoryLabel, q.maxUnitPrice)
         )
       );
 
@@ -170,9 +113,9 @@ export async function POST(req: NextRequest) {
             timestamp: new Date().toISOString(),
             step: "CHANNEL3_SEARCH",
             message: `PayEscrow AI queried Channel3 Product Graph across ${
-              categoryQueries.length
-            } categories (${categoryQueries
-              .map((c) => c.label)
+              aiPlan.categories.length
+            } categories (${aiPlan.categories
+              .map((category) => category.categoryLabel)
               .join(", ")}); retrieved ${
               sourcedItems.length
             } verified commercial SKUs.`,
